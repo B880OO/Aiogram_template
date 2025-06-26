@@ -2,7 +2,7 @@ from aiogram import Router
 from aiogram.types import Message
 from aiogram.filters import Command
 
-from Bot.Middleware.check_admin import AdminMiddleware
+from Bot.Middleware import AdminMiddleware
 
 
 class AdminHandler:

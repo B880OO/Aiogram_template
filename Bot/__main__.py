@@ -3,10 +3,14 @@ import colorlog
 import logging
 
 from aiogram import Bot, Dispatcher, Router
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from Bot.config import settings
 from Bot.Handlers import Handler_Router
 from Bot.Callbacks import Callback_Router
+from Bot.Database import Base
+from Bot.Middleware import DataBaseSessionMiddleware
 
 
 class TelegramBot:
@@ -18,8 +22,14 @@ class TelegramBot:
         self.bot = Bot(token=token)
         self.dp = Dispatcher()
 
+        self._engine = create_async_engine(settings.DATABASE_URL)
+        self._session_maker = async_sessionmaker(self._engine, expire_on_commit=False)
+
         self._setup_middleware()
         self._setup_routers(Handler_Router(), Callback_Router())
+
+        self.dp.startup.register(self._on_startup)
+        self.dp.shutdown.register(self._on_shutdown)
         self.logger.info("Бот инициализирован")
 
     def _setup_logging(self, level: int):
@@ -39,8 +49,8 @@ class TelegramBot:
         )
 
         logging.basicConfig(level=level, handlers=[handler])
-        logging.getLogger("aiogram").setLevel(logging.WARNING)
-        logging.getLogger("asyncio").setLevel(logging.WARNING)
+        # logging.getLogger("aiogram").setLevel(logging.WARNING)
+        # logging.getLogger("asyncio").setLevel(logging.WARNING)
 
     def _setup_routers(self, *routers: Router):
         """Добавление роутеров"""
@@ -52,8 +62,23 @@ class TelegramBot:
     def _setup_middleware(self):
         """Настройка middleware"""
         self.logger.debug("Настройка middleware...")
-        # self.dp.message.middleware(YourMiddleware())
+        self.dp.message.middleware(DataBaseSessionMiddleware(self._session_maker))
+        self.dp.callback_query.middleware(
+            DataBaseSessionMiddleware(self._session_maker)
+        )
         self.logger.debug("Middleware настроены")
+
+    async def _on_startup(self) -> None:
+        self.logger.debug("Bot starting up...")
+
+        async with self._engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        self.logger.debug("Database tables created")
+
+    async def _on_shutdown(self) -> None:
+        self.logger.info("Shutting down, closing database connections...")
+        await self._engine.dispose()
+        self.logger.info("Database connections closed")
 
     async def run(self):
         """Запуск бота с обработкой ошибок"""

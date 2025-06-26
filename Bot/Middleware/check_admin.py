@@ -17,7 +17,6 @@ class AdminMiddleware(BaseMiddleware):
 
         # Проверяем права администратора
         if event.from_user.id in settings.ADMINS:
-            data["is_admin"] = True
             return await handler(event, data)
         else:
             # Для не-админов прерываем выполнение
