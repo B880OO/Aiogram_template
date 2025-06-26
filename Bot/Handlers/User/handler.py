@@ -23,11 +23,15 @@ class UserHandler:
 
     async def start_cmd(self, message: Message, session: AsyncSession) -> None:
         user_id = message.from_user.id
+        first_name = message.from_user.first_name
+        username = message.from_user.username
         self.logger.debug(f"User with id: {user_id}, send command: {message.text}")
 
         user = await session.scalar(select(User).where(User.Telegram_id == user_id))
-        if user_id is None:
-            new_user = User(Telegram_id=user_id)
+        if user is None:
+            new_user = User(
+                Telegram_id=user_id, First_name=first_name, Username=username
+            )
             session.add(new_user)
         await message.answer(text="Hello World!!!")
 

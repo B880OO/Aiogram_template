@@ -49,8 +49,8 @@ class TelegramBot:
         )
 
         logging.basicConfig(level=level, handlers=[handler])
-        # logging.getLogger("aiogram").setLevel(logging.WARNING)
-        # logging.getLogger("asyncio").setLevel(logging.WARNING)
+        logging.getLogger("aiogram").setLevel(logging.DEBUG)
+        logging.getLogger("asyncio").setLevel(logging.DEBUG)
 
     def _setup_routers(self, *routers: Router):
         """Добавление роутеров"""
